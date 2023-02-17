@@ -3,7 +3,6 @@
 #include "pico/cyw43_arch.h"
 #include "EPD_Test.h"
 
-
 int main() {
     stdio_init_all();
     //setup_default_uart();
