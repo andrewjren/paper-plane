@@ -3,8 +3,6 @@
 #include "pico/cyw43_arch.h"
 #include "EPD_Test.h"
 
-char ssid[] = "NETGEAR64";
-char pass[] = "cloudybanana010";
 
 int main() {
     stdio_init_all();
