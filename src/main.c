@@ -5,6 +5,8 @@
 #include "lwip/dns.h"
 #include "lwip/tcp.h"
 #include "lwip/pbuf.h"
+#include "lwip/apps/http_client.h"
+#include "lwip/altcp.h"
 
 #define TCP_PORT 80
 #define STRMAC(s) STR(s)
@@ -61,6 +63,35 @@ static void dns_callback(const char *host_name, const ip_addr_t *ip_addr, void *
     }
 }
 
+static void result_callback(void *arg, httpc_result_t httpc_result, u32_t rx_content_len, u32_t srv_res, err_t err)
+{
+    printf("result callback: %u\n", httpc_result);
+}
+
+static err_t header_callback(httpc_state_t *connection, void *arg, struct pbuf *hdr, u16_t hdr_len, u32_t content_len)
+{
+    printf("::header callback len: %u\n", content_len);
+    char *buf = malloc(hdr->tot_len);
+
+    pbuf_copy_partial(hdr, buf, hdr->tot_len, 0);
+
+    printf("::header contents::\n%s\n",buf);
+
+    return ERR_OK;
+}
+
+static err_t body_callback(void *arg, struct altcp_pcb *conn, struct pbuf *p, err_t err)
+{
+    printf("::body callback\n");
+
+    char *buf = malloc(p->tot_len);
+
+    pbuf_copy_partial(p, buf, p->tot_len, 0);
+
+    printf("::body contents::\n%s\n",buf);
+
+    return ERR_OK;
+}
 
 int main() {
     stdio_init_all();
@@ -80,6 +111,23 @@ int main() {
         return 1;
     }
 
+    httpc_connection_t settings;
+    settings.result_fn = result_callback;
+    settings.headers_done_fn = header_callback; 
+
+    cyw43_arch_lwip_begin();
+    err_t err = httpc_get_file_dns(
+            "https://www.opensky-network.org",
+            80,
+            "/api/states/all?lamin=45.8389&lomin=5.9962&lamax=47.8229&lomax=10.5226",
+            &settings,
+            body_callback,
+            NULL,
+            NULL
+            );
+
+    cyw43_arch_lwip_end();
+    /*
     struct tcp_pcb *p_tcp_pcb = calloc(1, sizeof(struct tcp_pcb));
 
     if (!p_tcp_pcb) {
@@ -87,8 +135,8 @@ int main() {
         return 0;
     }
 
-    printf("registering callbacks\n");
-    uint32_t dummy = 0xabcdabcd;
+    //printf("registering callbacks\n");
+    //uint32_t dummy = 0xabcdabcd;
 
     tcp_arg(p_tcp_pcb, &dummy);
     tcp_sent(p_tcp_pcb, tcp_sent_callback);
@@ -115,11 +163,7 @@ int main() {
         printf("failed tcp_new\n");
         return 1;
     }
-    //printf("attempting to connect\n");
-    //cyw43_arch_lwip_begin();
-    //int connect_err = tcp_connect(p_tcp_pcb, &ip_address, TCP_PORT, tcp_connect_callback);
-    //cyw43_arch_lwip_end();
-
+*/
     EPD_7in5_V2_test();
 
     return 0;
